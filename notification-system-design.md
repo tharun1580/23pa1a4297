@@ -945,3 +945,102 @@ The asynchronous processing model provides several long-term advantages:
 * Dead Letter Queues handle failed messages safely.
 * Socket.IO delivers notifications instantly to connected users.
 * The architecture supports high traffic volumes and future system growth.
+
+
+# Stage 6
+
+# Priority-Based Notification Ordering
+
+## Notification Prioritization Strategy
+
+As the number of notifications increases, displaying messages solely based on their creation time may make it difficult for students to identify important updates quickly.
+
+To improve the usability of the notification dashboard, notifications should be displayed according to their priority level. This approach ensures that critical information receives greater visibility and is presented before less important announcements.
+
+---
+
+# Priority Levels
+
+The notification categories are assigned the following priority order:
+
+1. **Placement**
+2. **Result**
+3. **Event**
+
+Notifications belonging to higher-priority categories are displayed before lower-priority notifications.
+
+---
+
+# Priority-Based SQL Query
+
+```sql id="8wvxqj"
+SELECT *
+FROM notifications
+WHERE student_id = ?
+ORDER BY
+    CASE
+        WHEN type = 'Placement' THEN 1
+        WHEN type = 'Result' THEN 2
+        WHEN type = 'Event' THEN 3
+    END,
+    created_at DESC;
+```
+
+The `CASE` expression assigns a ranking value to each notification category, allowing the database to return notifications according to their importance.
+
+Within each category, notifications are arranged from the most recent to the oldest using the `created_at` field.
+
+---
+
+# Sorting Logic
+
+The query performs two levels of ordering:
+
+### Category Priority
+
+* Placement notifications receive the highest priority.
+* Result notifications receive medium priority.
+* Event notifications receive lower priority.
+
+### Chronological Ordering
+
+Notifications belonging to the same category are sorted by creation time in descending order, ensuring that the latest updates appear first.
+
+---
+
+# Advantages of Priority-Based Ordering
+
+Implementing notification prioritization provides several benefits:
+
+* Placement notifications remain visible at the top of the dashboard.
+* Academic updates such as examination results receive higher importance than general announcements.
+* Recent notifications within the same category are easier to locate.
+* Users can quickly identify critical information without searching through the entire notification list.
+* The notification interface becomes more organized and user-friendly.
+
+---
+
+# User Experience Improvements
+
+Priority-based sorting enhances the overall user experience by:
+
+* Reducing the time required to find important information.
+* Increasing the visibility of high-priority notifications.
+* Improving the effectiveness of the notification system.
+* Ensuring that urgent updates receive immediate attention.
+
+---
+
+# Implementation Summary
+
+* Notifications are ranked according to predefined category priorities.
+* Placement notifications receive the highest priority, followed by Results and Events.
+* The `CASE` expression determines the ordering sequence.
+* Notifications within the same category are sorted by creation time.
+* Priority-based ordering improves usability and information accessibility.
+
+---
+
+# Conclusion
+
+Implementing priority-based notification ordering enhances the effectiveness of the notification platform by ensuring that the most important updates are presented first. Combining category-based prioritization with chronological sorting allows students to receive critical information quickly while maintaining a structured and organized notification dashboard.
