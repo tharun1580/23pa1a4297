@@ -512,3 +512,179 @@ This operation removes a notification document from the collection using its uni
 * The schema remains flexible to accommodate future requirements.
 * Performance optimization techniques ensure scalability as data volume increases.
 * Caching and sharding strategies support long-term system growth.
+
+
+# Stage 3
+
+# Query Analysis and Performance Evaluation
+
+## Existing Query
+
+```sql
+SELECT *
+FROM notifications
+WHERE student_id = 1042
+AND is_read = FALSE
+ORDER BY created_at ASC;
+```
+
+## Query Evaluation
+
+From a functional standpoint, the query is correct. It retrieves all unread notifications belonging to the student with the ID **1042** and displays them in ascending order based on their creation time.
+
+Although the query produces the expected results, its performance may degrade significantly as the size of the notification table increases.
+
+---
+
+# Performance Considerations
+
+## 1. Retrieving Unnecessary Columns
+
+The use of `SELECT *` instructs the database to fetch every column from the matching records.
+
+In most notification systems, the application only requires a limited number of fields such as the title, message, category, and timestamp. Retrieving unnecessary columns increases:
+
+* Disk I/O operations
+* Memory usage
+* Network bandwidth consumption
+* Query execution time
+
+---
+
+## 2. Missing Indexes
+
+If the filtering columns are not indexed, the database engine must examine every row in the table to identify matching records.
+
+As the number of notifications grows, this full table scan becomes increasingly expensive and results in longer response times.
+
+---
+
+## 3. Sorting Overhead
+
+The query sorts the result set using the `created_at` column.
+
+When the sorting column is not included in an appropriate index, the database must perform an additional sorting operation after filtering the records. This extra processing can negatively affect performance, particularly for large datasets.
+
+---
+
+# Optimized Query
+
+Rather than retrieving every column, it is more efficient to select only the attributes required by the application.
+
+```sql
+SELECT
+    id,
+    title,
+    message,
+    type,
+    created_at
+FROM notifications
+WHERE student_id = 1042
+AND is_read = FALSE
+ORDER BY created_at ASC;
+```
+
+This optimized query reduces the amount of data transferred and minimizes resource consumption during execution.
+
+---
+
+# Recommended Index
+
+A composite index that aligns with the filtering and sorting conditions of the query provides the greatest performance benefit.
+
+```sql
+CREATE INDEX idx_notifications_student_read_created
+ON notifications(student_id, is_read, created_at);
+```
+
+This index enables the database to:
+
+* Locate notifications for a particular student efficiently.
+* Filter unread notifications without scanning the entire table.
+* Return records in chronological order directly from the index.
+
+Consequently, both search time and sorting overhead are significantly reduced.
+
+---
+
+# Time Complexity Analysis
+
+## Without an Index
+
+When suitable indexes are absent, the database performs a sequential scan of the entire table.
+
+* Search Operation: **O(n)**
+* Sorting Operation: **O(n log n)**
+
+As the number of records increases, query execution time grows substantially.
+
+---
+
+## With the Composite Index
+
+Using the recommended composite index allows the database engine to access only the required records.
+
+* Index Lookup: **O(log n)**
+* Record Retrieval: proportional to the number of matching records
+
+Since the index already maintains the required ordering, the database often avoids performing an additional sorting operation.
+
+---
+
+# Should Every Column Be Indexed?
+
+No.
+
+Although indexes improve query performance, creating indexes on every column is generally considered poor database design.
+
+Excessive indexing introduces several drawbacks:
+
+* Additional storage space is required for each index.
+* INSERT, UPDATE, and DELETE operations become slower because all indexes must be maintained.
+* Many indexes may remain unused by the query optimizer.
+* Database maintenance, backups, and recovery operations become more expensive.
+
+A better approach is to create indexes only on columns that are frequently used in filtering, sorting, joining, or searching operations.
+
+---
+
+# SQL Query Example
+
+Retrieve the IDs of students who received **Placement** notifications during the previous seven days.
+
+```sql
+SELECT DISTINCT student_id
+FROM notifications
+WHERE type = 'Placement'
+AND created_at >= NOW() - INTERVAL 7 DAY;
+```
+
+This query identifies unique students who received placement-related notifications within the last week.
+
+---
+
+# Recommended Index for the Above Query
+
+The following composite index improves the execution efficiency of the query.
+
+```sql
+CREATE INDEX idx_notifications_type_created
+ON notifications(type, created_at);
+```
+
+This index allows the database to:
+
+* Quickly locate notifications belonging to the **Placement** category.
+* Restrict the search to recently created records.
+* Reduce the number of rows examined during execution.
+
+---
+
+# Summary
+
+* The original query is functionally correct but may not scale efficiently.
+* Selecting only the required columns reduces resource consumption.
+* Composite indexes significantly improve filtering and sorting performance.
+* Proper indexing minimizes full table scans and unnecessary sorting.
+* Excessive indexing should be avoided due to its impact on storage and write operations.
+* Query optimization and index design are essential for maintaining performance as the notification database grows.
