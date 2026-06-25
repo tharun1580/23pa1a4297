@@ -802,3 +802,146 @@ Integrating Redis and Socket.IO provides several advantages for the notification
 * Database load is reduced by serving frequently accessed data from memory.
 * Instant notification delivery improves user engagement and system responsiveness.
 * The combined architecture supports scalability as the notification platform grows.
+
+
+# Stage 5
+
+# Asynchronous Notification Processing
+
+## Message Queue Integration
+
+As the notification platform grows in scale and usage, directly processing notification delivery within the API layer may increase response times and reduce system reliability.
+
+To improve scalability, fault tolerance, and overall system performance, a message broker such as **RabbitMQ** can be introduced between the Notification API and the notification delivery service.
+
+Instead of delivering notifications immediately after an API request, the application first stores the notification in the database and then publishes a message to RabbitMQ. Background worker processes consume messages from the queue and perform notification delivery independently.
+
+This asynchronous architecture prevents the API from waiting for the delivery process to complete.
+
+---
+
+# Notification Processing Workflow
+
+The notification lifecycle consists of the following steps:
+
+1. The notification is stored in the MySQL database.
+2. A notification message is published to RabbitMQ.
+3. A background worker retrieves the message from the queue.
+4. The worker delivers the notification to the intended user through Socket.IO.
+5. If delivery fails, the worker retries the operation according to a predefined retry policy.
+6. Messages that continue to fail are transferred to a **Dead Letter Queue (DLQ)** for further analysis or manual intervention.
+
+By separating message delivery from the API layer, client requests can be completed quickly without waiting for notification transmission.
+
+---
+
+# Retry and Failure Handling
+
+Reliable message delivery is essential for notification systems.
+
+When a delivery attempt fails because of temporary issues such as network interruptions or unavailable services, the worker retries the operation automatically.
+
+If the message continues to fail after the configured retry attempts, it is moved to the Dead Letter Queue.
+
+The Dead Letter Queue provides several benefits:
+
+* Prevents failed messages from being lost.
+* Isolates problematic notifications.
+* Enables debugging and monitoring.
+* Allows manual processing or resubmission of failed messages.
+
+---
+
+# Advantages of Message Queues
+
+Introducing RabbitMQ into the architecture provides several important benefits:
+
+* API requests complete quickly because notification delivery occurs asynchronously.
+* Worker services can be scaled independently based on traffic volume.
+* Retry mechanisms improve message delivery reliability.
+* Failed notifications are preserved in the Dead Letter Queue.
+* Traffic spikes can be absorbed by the queue without overloading the application.
+* The system becomes more resilient and fault tolerant.
+
+---
+
+# System Architecture
+
+```id="fhmwyb"
+Client
+   │
+   ▼
+Notification API
+   │
+   ▼
+MySQL Database
+   │
+   ▼
+RabbitMQ Exchange / Queue
+   │
+   ▼
+Background Worker
+   │
+   ▼
+Socket.IO Server
+   │
+   ▼
+Connected Users
+```
+
+---
+
+# Component Responsibilities
+
+### Notification API
+
+* Receives client requests.
+* Stores notifications in the database.
+* Publishes messages to RabbitMQ.
+
+### MySQL Database
+
+* Maintains persistent notification records.
+* Acts as the primary data source.
+
+### RabbitMQ
+
+* Queues notification messages.
+* Buffers sudden increases in traffic.
+* Ensures reliable message delivery.
+
+### Background Workers
+
+* Consume messages from the queue.
+* Process notification delivery.
+* Handle retries and failure scenarios.
+
+### Socket.IO Server
+
+* Maintains active client connections.
+* Delivers notifications in real time.
+
+---
+
+# Architectural Benefits
+
+The asynchronous processing model provides several long-term advantages:
+
+* Improved API responsiveness
+* Better scalability
+* Higher fault tolerance
+* Reliable notification delivery
+* Reduced server workload
+* Efficient handling of traffic spikes
+* Simplified system maintenance
+
+---
+
+# Architecture Summary
+
+* RabbitMQ decouples notification delivery from the API layer.
+* Background workers process messages asynchronously.
+* Retry mechanisms improve delivery success rates.
+* Dead Letter Queues handle failed messages safely.
+* Socket.IO delivers notifications instantly to connected users.
+* The architecture supports high traffic volumes and future system growth.
