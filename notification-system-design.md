@@ -295,3 +295,220 @@ new-notification
 * Date and time values follow the ISO 8601 standard.
 * Response structures remain consistent to simplify client integration and error handling.
 * Real-time updates are delivered through Socket.IO for improved user experience.
+
+
+# Stage 2
+
+# Database Design and Storage Strategy
+
+## Database Selection
+
+For the notification management system, **MongoDB** is selected as the primary database for storing and managing notification records.
+
+### Reasons for Choosing MongoDB
+
+MongoDB is particularly suitable for notification-based applications because it provides:
+
+* A document-oriented data model using BSON (Binary JSON) documents.
+* High write performance, which is essential for applications generating notifications frequently.
+* Horizontal scalability through sharding, enabling the system to support increasing data volumes.
+* Schema flexibility, allowing new attributes to be introduced without restructuring existing documents.
+* Easy integration with Node.js applications using the Mongoose Object Data Modeling (ODM) library.
+
+---
+
+# Database Collections
+
+## students Collection
+
+```json
+{
+  "_id": ObjectId,
+  "name": "PEDADA SAI KRISHNA",
+  "email": "23pa1a4287@vishnu.edu.in",
+  "createdAt": ISODate("2026-04-22T17:51:18Z")
+}
+```
+
+---
+
+## notifications Collection
+
+```json
+{
+  "_id": ObjectId,
+  "studentId": ObjectId,
+  "type": "Placement",
+  "title": "Placement Drive",
+  "message": "Microsoft is hiring",
+  "isRead": false,
+  "createdAt": ISODate("2026-04-22T17:51:18Z")
+}
+```
+
+---
+
+# Relationship Between Collections
+
+A single student may receive multiple notifications during their academic lifecycle.
+
+```
+Student
+   │
+   ├── Notification
+   ├── Notification
+   └── Notification
+```
+
+The relationship between the `students` and `notifications` collections is established using the `studentId` field present in each notification document.
+
+This represents a **one-to-many relationship**, where one student can own multiple notifications.
+
+---
+
+# Indexing Strategy
+
+To improve query efficiency and reduce response times, the following indexes should be created.
+
+```javascript
+db.notifications.createIndex({ studentId: 1 })
+
+db.notifications.createIndex({ studentId: 1, isRead: 1 })
+
+db.notifications.createIndex({ type: 1 })
+
+db.notifications.createIndex({ createdAt: -1 })
+```
+
+These indexes enable MongoDB to quickly locate relevant documents without performing full collection scans, thereby improving application performance.
+
+---
+
+# Challenges in Large-Scale Data Environments
+
+As the number of notification records increases, several performance challenges may arise:
+
+* Query execution time may increase if indexes are not properly maintained.
+* Loading large datasets can lead to higher memory consumption.
+* Sorting notifications by creation date requires additional processing overhead.
+* Increased collection size may result in higher query latency.
+
+---
+
+# Performance Optimization Techniques
+
+The following strategies help maintain efficient system performance as the application grows:
+
+* Create indexes on frequently queried fields.
+* Implement pagination using `skip()` and `limit()` to minimize data retrieval.
+* Use field projections to return only necessary attributes.
+* Move older notifications into archive collections.
+* Apply sharding when notification volume becomes significantly large.
+* Utilize Redis caching for frequently accessed notifications to reduce database load.
+
+---
+
+# MongoDB Operations
+
+## Retrieve Notifications
+
+```javascript
+db.notifications
+.find({ studentId: ObjectId(studentId) })
+.sort({ createdAt: -1 })
+.skip(0)
+.limit(10)
+```
+
+This query retrieves a paginated list of notifications for a particular student, ordered from the most recent to the oldest.
+
+---
+
+## Retrieve a Single Notification
+
+```javascript
+db.notifications.findOne({
+    _id: ObjectId(notificationId)
+})
+```
+
+This operation fetches a notification document using its unique identifier.
+
+---
+
+## Insert a New Notification
+
+```javascript
+db.notifications.insertOne({
+    studentId: ObjectId(studentId),
+    type: "Placement",
+    title: "Placement Drive",
+    message: "Microsoft is hiring",
+    isRead: false,
+    createdAt: new Date()
+})
+```
+
+This operation creates and stores a new notification document in the database.
+
+---
+
+## Mark a Notification as Read
+
+```javascript
+db.notifications.updateOne(
+    {
+        _id: ObjectId(notificationId)
+    },
+    {
+        $set: {
+            isRead: true
+        }
+    }
+)
+```
+
+This operation updates the read status of an individual notification.
+
+---
+
+## Mark All Notifications as Read
+
+```javascript
+db.notifications.updateMany(
+    {
+        studentId: ObjectId(studentId)
+    },
+    {
+        $set: {
+            isRead: true
+        }
+    }
+)
+```
+
+This operation updates all notifications belonging to a particular student and marks them as read.
+
+---
+
+## Delete a Notification
+
+```javascript
+db.notifications.deleteOne({
+    _id: ObjectId(notificationId)
+})
+```
+
+This operation removes a notification document from the collection using its unique identifier.
+
+---
+
+# Database Design Principles
+
+* MongoDB collections are designed to support high-volume notification workloads.
+* Relationships are maintained using document references.
+* Indexes are applied to optimize frequently executed queries.
+* Pagination techniques prevent excessive memory usage.
+* The schema remains flexible to accommodate future requirements.
+* Performance optimization techniques ensure scalability as data volume increases.
+* Caching and sharding strategies support long-term system growth.
