@@ -324,8 +324,8 @@ MongoDB is particularly suitable for notification-based applications because it 
 ```json
 {
   "_id": ObjectId,
-  "name": "PEDADA SAI KRISHNA",
-  "email": "23pa1a4287@vishnu.edu.in",
+  "name": "RAMISETTI THARUN VASU SAI",
+  "email": "23pa1a4297@vishnu.edu.in",
   "createdAt": ISODate("2026-04-22T17:51:18Z")
 }
 ```
