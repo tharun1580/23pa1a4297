@@ -1,1 +1,297 @@
-# Notification System Design
+# Notification System API Design
+
+## Stage 1
+
+### Overview
+
+This document defines the REST API specification for a campus notification system. The platform allows students to receive important announcements related to placements, academic results, campus events, and other institutional updates.
+
+The API follows RESTful principles, exchanges data in JSON format, and utilizes standard HTTP methods and status codes. Real-time notification delivery is supported through Socket.IO using WebSocket connections.
+
+---
+
+# Notification Resource Structure
+
+```json
+{
+  "id": "uuid",
+  "type": "Placement",
+  "title": "Placement Drive",
+  "message": "TCS Corporation is hiring.",
+  "isRead": false,
+  "createdAt": "2026-04-22T17:51:18Z"
+}
+```
+
+---
+
+# Standard HTTP Headers
+
+### Request Headers
+
+```
+Content-Type: application/json
+Accept: application/json
+```
+
+### Response Headers
+
+```
+Content-Type: application/json
+```
+
+---
+
+# 1. Retrieve Notifications
+
+### Endpoint
+
+```
+GET /api/notifications
+```
+
+### Description
+
+Returns the list of notifications associated with the authenticated student.
+
+### Query Parameters
+
+| Parameter | Type    | Required | Description                                                           |
+| --------- | ------- | -------- | --------------------------------------------------------------------- |
+| page      | Integer | No       | Specifies the page number for pagination                              |
+| limit     | Integer | No       | Determines the number of records per page                             |
+| type      | String  | No       | Filters notifications by category such as Placement, Event, or Result |
+
+### Example Request
+
+```
+GET /api/notifications?page=1&limit=10&type=Placement
+```
+
+### Success Response (200 OK)
+
+```json
+{
+  "success": true,
+  "page": 1,
+  "limit": 10,
+  "total": 250,
+  "notifications": [
+    {
+      "id": "1",
+      "type": "Placement",
+      "title": "Placement Drive",
+      "message": "Amazon hiring",
+      "isRead": false,
+      "createdAt": "2026-04-22T17:51:18Z"
+    }
+  ]
+}
+```
+
+---
+
+# 2. Retrieve a Single Notification
+
+### Endpoint
+
+```
+GET /api/notifications/{id}
+```
+
+### Example Request
+
+```
+GET /api/notifications/123
+```
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "notification": {
+    "id": "123",
+    "type": "Result",
+    "title": "Semester Result",
+    "message": "Results published",
+    "isRead": false,
+    "createdAt": "2026-04-22T17:51:18Z"
+  }
+}
+```
+
+---
+
+# 3. Create a Notification
+
+### Endpoint
+
+```
+POST /api/notifications
+```
+
+### Request Body
+
+```json
+{
+  "type": "Placement",
+  "title": "Placement Drive",
+  "message": "Microsoft is hiring."
+}
+```
+
+### Success Response (201 Created)
+
+```json
+{
+  "success": true,
+  "message": "Notification created successfully.",
+  "notificationId": "12345"
+}
+```
+
+---
+
+# 4. Mark a Notification as Read
+
+### Endpoint
+
+```
+PATCH /api/notifications/{id}/read
+```
+
+### Description
+
+Updates the read status of a specific notification.
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "message": "Notification status updated successfully."
+}
+```
+
+---
+
+# 5. Mark All Notifications as Read
+
+### Endpoint
+
+```
+PATCH /api/notifications/read-all
+```
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "message": "All notifications have been marked as read."
+}
+```
+
+---
+
+# 6. Delete a Notification
+
+### Endpoint
+
+```
+DELETE /api/notifications/{id}
+```
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "message": "Notification removed successfully."
+}
+```
+
+---
+
+# HTTP Status Codes
+
+| Status Code | Description                        |
+| ----------- | ---------------------------------- |
+| 200         | Request completed successfully     |
+| 201         | Resource created successfully      |
+| 400         | Invalid request data or parameters |
+| 404         | Notification resource not found    |
+| 500         | Internal server error              |
+
+---
+
+# Error Response Format
+
+```json
+{
+  "success": false,
+  "message": "Notification not found."
+}
+```
+
+---
+
+# Real-Time Notification Delivery
+
+### Communication Protocol
+
+* Socket.IO (WebSocket)
+
+### Notification Workflow
+
+1. The student authenticates into the application.
+2. A WebSocket connection is established between the client and the server.
+3. The server maintains an active socket session for the student.
+4. An administrator creates a new notification.
+5. The notification is stored in the database.
+6. The server instantly broadcasts the notification to the intended recipients.
+7. Connected students receive the notification in real time without refreshing the application.
+
+### Event Name
+
+```
+new-notification
+```
+
+### Event Payload
+
+```json
+{
+  "id": "123",
+  "type": "Placement",
+  "title": "Placement Drive",
+  "message": "Amazon hiring",
+  "createdAt": "2026-04-22T17:51:18Z"
+}
+```
+
+---
+
+# API Summary
+
+| HTTP Method | Endpoint                     | Description                      |
+| ----------- | ---------------------------- | -------------------------------- |
+| GET         | /api/notifications           | Retrieve all notifications       |
+| GET         | /api/notifications/{id}      | Retrieve a specific notification |
+| POST        | /api/notifications           | Create a new notification        |
+| PATCH       | /api/notifications/{id}/read | Mark a notification as read      |
+| PATCH       | /api/notifications/read-all  | Mark all notifications as read   |
+| DELETE      | /api/notifications/{id}      | Delete a notification            |
+
+---
+
+# Design Principles
+
+* Resource URIs use plural nouns to maintain consistency.
+* HTTP methods follow RESTful design conventions.
+* All request and response bodies use JSON format.
+* Each notification is uniquely identified using a UUID.
+* Date and time values follow the ISO 8601 standard.
+* Response structures remain consistent to simplify client integration and error handling.
+* Real-time updates are delivered through Socket.IO for improved user experience.
